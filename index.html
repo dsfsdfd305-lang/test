@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tutorize Free – pulsuz test generatoru</title>
+<style>
+:root{--bg:#f3f1ff;--card:#fff;--ink:#16173d;--mut:#5d6090;--line:#e1ddfa;--ac:#6d4aff;--ok:#16a34a;--bad:#e11d48;--am:#f59e0b;--tl:#00b8a9}
+@media(prefers-color-scheme:dark){:root{--bg:#0d0e2b;--card:#171946;--ink:#f0f0ff;--mut:#a9acdf;--line:#2c2f6e}}
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif}
+main{max-width:64rem;margin:0 auto;padding:0 1rem 3rem}
+h1,h2,h3{margin:.2rem 0}
+.top{display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.7rem 1rem;max-width:64rem;margin:0 auto}
+.logo{font-weight:800;font-size:1.3rem;cursor:pointer}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:1.2rem;margin-top:1rem}
+.mut{color:var(--mut)}.sm{font-size:.85rem}.hidden{display:none!important}
+.row{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:space-between}
+.btn{border:0;border-radius:12px;padding:.65rem 1rem;font:inherit;font-weight:700;color:#fff;background:var(--ac);cursor:pointer;min-height:42px}
+.btn.g{background:var(--ok)}.btn.t{background:var(--tl)}.btn.a{background:var(--am);color:#2b1b00}.btn.r{background:var(--bad)}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn:disabled{opacity:.6}
+input,select{width:100%;font:inherit;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:.65rem .8rem;min-height:44px}
+input[type=checkbox],input[type=radio]{width:auto;min-height:0}
+label{display:block;font-weight:700;font-size:.9rem;margin-top:.7rem}
+.grid{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.hero{background:linear-gradient(135deg,#2b1c9a,#5b3df0);color:#fff;border-radius:26px;padding:2rem 1.4rem;margin-top:1rem}
+.hero h1{font-size:clamp(1.8rem,6vw,3rem)}
+.tiles{display:grid;gap:.6rem;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));margin:.8rem 0}
+.tile{border:0;border-radius:16px;color:#fff;padding:.8rem .4rem;font:inherit;font-weight:700;cursor:pointer;font-size:.85rem}
+.tile b{font-size:1.7rem;display:block}.tile.on{outline:3px solid var(--ink);outline-offset:2px}
+.tabs{display:flex;gap:.4rem;background:var(--bg);padding:.3rem;border-radius:14px;margin-top:1rem}
+.tabs button{flex:1;border:0;background:none;color:var(--mut);font:inherit;font-weight:800;padding:.5rem;border-radius:10px;cursor:pointer}
+.tabs .on{background:var(--card);color:var(--ac)}
+.chip{display:inline-block;padding:.1rem .6rem;border-radius:99px;font-size:.75rem;font-weight:800;color:#fff;background:var(--ac)}
+.opt{display:flex;gap:.6rem;align-items:center;padding:.5rem .7rem;border:1.5px solid var(--line);border-radius:10px;margin-top:.4rem}
+.opt.ok{background:rgba(22,163,74,.16);border-color:var(--ok)}.opt.bad{background:rgba(225,29,72,.14);border-color:var(--bad)}.opt.sel{border-color:var(--ac);background:rgba(109,74,255,.14)}
+.bar{height:12px;border-radius:99px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;border-radius:99px}
+.err{color:var(--bad);font-weight:700;font-size:.9rem;margin-top:.6rem}
+.note{background:rgba(0,184,169,.14);padding:.6rem;border-radius:10px;font-size:.9rem}
+table{width:100%;border-collapse:collapse;font-size:.9rem}td,th{padding:.4rem;border-top:1px solid var(--line);text-align:left}
+#modal{position:fixed;inset:0;background:rgba(10,10,40,.65);z-index:60;display:none;justify-content:center;overflow:auto}
+#modal.on{display:flex}#mbox{width:100%;max-width:42rem;margin:1rem;align-self:flex-start}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(1rem + env(safe-area-inset-bottom,0px));background:var(--ok);color:#fff;padding:.7rem 1.1rem;border-radius:12px;font-weight:700;z-index:80;display:none}
+@media print{body *{visibility:hidden}#cards,#cards *{visibility:visible}#cards{position:absolute;left:0;top:0;width:100%}}
+</style>
+</head>
+<body>
+<div class="top"><span class="logo" data-go="h">🎓 Tutorize <span class="chip" style="background:var(--tl)">Free</span></span><span><button class="btn a hidden" id="lo">Çıxış</button></span></div>
+<main id="app"><p class="mut" style="padding:2rem">Yüklənir…</p></main>
+<div id="modal"><div class="card" id="mbox"></div></div>
+<div id="toast"></div>
+
+<script type="module">
+import {initializeApp} from 'https://cdn.jsdelivr.net/npm/firebase@10.12.2/app/+esm';
+import {getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut} from 'https://cdn.jsdelivr.net/npm/firebase@10.12.2/auth/+esm';
+import {getFirestore,doc,getDoc,setDoc,addDoc,collection,query,where,onSnapshot,writeBatch} from 'https://cdn.jsdelivr.net/npm/firebase@10.12.2/firestore/+esm';
+
+const firebaseConfig={apiKey:"AIzaSyAlNK3oZAxYItlX948YQjKI-zWR7H5v3dU",authDomain:"test-62fa3.firebaseapp.com",projectId:"test-62fa3",storageBucket:"test-62fa3.firebasestorage.app",messagingSenderId:"597068282145",appId:"1:597068282145:web:cdccfe4ffeee722a2c2660"};
+const fa=initializeApp(firebaseConfig),auth=getAuth(fa),db=getFirestore(fa);
+
+const $=s=>document.querySelector(s);
+const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const S=(e,c,t,q)=>({e,c,t,q:q.map(x=>[x[0],x[1],x[2].split('|'),x[3],x[4]])});
+const DB={
+"Riyaziyyat":S("➗",["#6d4aff","#9b7bff"],["Kəsrlər","Tənliklər","Həndəsə"],[
+[0,"3/4 + 1/4 = ?","1|4/8|3/8|1/2",0,"Məxrəc eynidir: (3+1)/4 = 1."],
+[0,"2/3 kəsrinin 12-si neçədir?","6|8|9|10",1,"12 · 2/3 = 8."],
+[1,"2x + 6 = 14 olarsa, x = ?","3|4|5|10",1,"2x = 8, x = 4."],
+[1,"3x − 5 = 16 olarsa, x = ?","5|6|7|8",2,"3x = 21, x = 7."],
+[2,"Tərəfləri 5 və 8 sm olan düzbucaqlının sahəsi?","13 sm²|26 sm²|40 sm²|45 sm²",2,"S = 5 · 8 = 40."],
+[2,"Üçbucağın daxili bucaqları cəmi?","90°|180°|270°|360°",1,"Cəm 180°-dir."]]),
+"Azərbaycan dili":S("📖",["#ff4d6d","#ff8fa3"],["Fonetika","Leksika","Qrammatika"],[
+[0,"“Kitab” sözündə neçə sait var?","0|1|2|3",2,"i və a saitdir."],
+[0,"“Məktəb” sözündə neçə hece var?","1|2|3|4",1,"Mək-təb: 2 hece."],
+[1,"“Yaxşı” sözünün antonimi?","Gözəl|Pis|Böyük|Tez",1,"Əks mənalı söz: pis."],
+[1,"“Cəsur” sözünün sinonimi?","Qorxaq|İgid|Tənbəl|Yavaş",1,"Yaxın mənalı söz: igid."],
+[2,"İsim hansı suallara cavab verir?","kim? nə?|necə?|neçə?|nə edir?",0,"İsim “kim? nə?” sualına cavab verir."],
+[2,"Feil hansı suala cavab verir?","kim?|necə?|nə edir?|harada?",2,"Feil işi bildirir."]]),
+"Fizika":S("⚡",["#0ea5e9","#4cc9f0"],["Hərəkət","Qüvvə","İş və enerji"],[
+[0,"Sürət düsturu?","v = s/t|v = s·t|v = t/s|v = s+t",0,"Sürət = yol / zaman."],
+[0,"2 saata 120 km gedənin sürəti?","40 km/s|60 km/s|80 km/s|240 km/s",1,"120 : 2 = 60."],
+[1,"Qüvvənin vahidi?","Coul|Nyuton|Vatt|Paskal",1,"Qüvvə Nyutonla ölçülür."],
+[1,"m = 2 kq, a = 3 m/s² olarsa F = ?","5 N|6 N|1,5 N|9 N",1,"F = m·a = 6 N."],
+[2,"İşin vahidi?","Coul|Nyuton|Vatt|Metr",0,"İş Coulla ölçülür."],
+[2,"Gücün vahidi?","Vatt|Coul|Nyuton|Kq",0,"Güc Vattla ölçülür."]]),
+"Biologiya":S("🧬",["#16a34a","#4ade80"],["Hüceyrə","Bitkilər","İnsan"],[
+[0,"Hüceyrənin enerji stansiyası?","Nüvə|Mitoxondri|Ribosom|Vakuol",1,"Mitoxondriyada tənəffüs gedir."],
+[0,"Hüceyrənin idarəedici mərkəzi?","Nüvə|Membran|Vakuol|Ribosom",0,"Nüvədə genetik məlumat var."],
+[1,"Fotosintez harada gedir?","Xloroplast|Mitoxondri|Nüvə|Lizosom",0,"Xloroplastda xlorofil işığı udur."],
+[1,"Fotosintezdə bitki hansı qazı udur?","Oksigen|Azot|Karbon qazı|Hidrogen",2,"CO₂ udulur, O₂ ayrılır."],
+[2,"İnsan ürəyi neçə kameradan ibarətdir?","2|3|4|5",2,"2 qulaqcıq, 2 mədəcik."],
+[2,"Qanın qırmızı rəngini hansı maddə verir?","Hemoqlobin|Leykosit|Plazma|Trombosit",0,"Hemoqlobin oksigeni daşıyır."]]),
+"Kimya":S("⚗️",["#f97316","#fdba74"],["Maddə","Elementlər","Reaksiyalar"],[
+[0,"Suyun formulu?","H₂O|CO₂|O₂|NaCl",0,"2 hidrogen + 1 oksigen."],
+[0,"Karbon qazının formulu?","CO|CO₂|C₂O|CH₄",1,"Bir karbon, iki oksigen."],
+[1,"Natriumun simvolu?","N|Na|Ni|S",1,"Natrium — Na."],
+[1,"Karbonun sıra nömrəsi?","4|6|8|12",1,"Karbon 6-cı elementdir."],
+[2,"Yanma üçün hansı qaz lazımdır?","Azot|Oksigen|Helium|Neon",1,"Yanma oksigenlə gedir."],
+[2,"Qələvidə lakmus hansı rəngə boyanır?","Qırmızı|Mavi|Sarı|Yaşıl",1,"Qələvidə lakmus mavi olur."]]),
+"Tarix":S("🏛️",["#b45309","#f0b45c"],["Qədim dünya","Orta əsrlər","Azərbaycan"],[
+[0,"Qədim Misir hökmdarları necə adlanırdı?","Sultan|Fironlar|İmperator|Xan",1,"Fironlar."],
+[0,"Ehramlar nə üçün tikilirdi?","Qala|Qəbir|Bazar|Məktəb",1,"Fironların məqbərələridir."],
+[1,"Orta əsrdə torpaq sahibləri?","Feodal|Tacir|Kahin|Əsgər",0,"Feodallar torpağa sahib idi."],
+[1,"İpək yolu nə ilə məşhur idi?","Ticarət|Dəniz döyüşü|Əkinçilik|Tikinti",0,"Şərqi Qərblə bağlayan ticarət yolu."],
+[2,"ADR neçənci ildə yaranıb?","1828|1918|1991|1945",1,"28 may 1918."],
+[2,"Azərbaycan bayrağında neçə rəng var?","2|3|4|5",1,"Göy, qırmızı və yaşıl."]]),
+"Coğrafiya":S("🌍",["#0d9488","#5eead4"],["Yer","İqlim","Azərbaycan"],[
+[0,"Ən böyük okean?","Atlantik|Sakit|Hind|Şimal Buzlu",1,"Sakit okean."],
+[0,"Ən böyük materik?","Afrika|Avropa|Asiya|Amerika",2,"Asiya."],
+[1,"Ekvator ətrafında iqlim?","Soyuq|İsti|Mülayim|Quru-soyuq",1,"Günəş şüaları dik düşür."],
+[1,"Qütblərdə iqlim necədir?","İsti|Çox soyuq|Mülayim|Tropik",1,"Qütblər çox soyuqdur."],
+[2,"Azərbaycanın əsas uzun çayı?","Kür|Samur|Qanıx|Qusar",0,"Kür."],
+[2,"Xəzər dənizi Azərbaycanın hansı tərəfindədir?","Şimal|Şərq|Qərb|Cənub",1,"Şərq."]]),
+"İngilis dili":S("🔤",["#7c3aed","#c4b5fd"],["Qrammatika","Lüğət","Zamanlar"],[
+[0,"She ___ a teacher.","am|is|are|be",1,"“She” ilə “is”."],
+[0,"They ___ happy.","is|am|are|be",2,"“They” ilə “are”."],
+[1,"“Apple” sözünün tərcüməsi?","Alma|Armud|Üzüm|Nar",0,"Apple — alma."],
+[1,"“Water” sözünün tərcüməsi?","Od|Hava|Su|Torpaq",2,"Water — su."],
+[2,"I ___ football yesterday.","play|plays|played|playing",2,"Keçmiş zaman: played."],
+[2,"He ___ to school every day.","go|goes|going|gone",1,"3-cü şəxs: goes."]]),
+"İnformatika":S("💻",["#2563eb","#7aa7ff"],["Kompüter","Alqoritm","İnternet"],[
+[0,"Kompüterin “beyni”?","Monitor|Prosessor|Siçan|Printer",1,"Prosessor."],
+[0,"Giriş qurğusu hansıdır?","Monitor|Klaviatura|Dinamik|Printer",1,"Klaviatura."],
+[1,"Alqoritm nədir?","Proqram dili|Addım-addım təlimat|Kompüter növü|Şəbəkə",1,"Həll addımları ardıcıllığı."],
+[1,"Şərt yoxlayan əmr?","if|print|loop|end",0,"if şərtə görə qərar verir."],
+[2,"WWW nə deməkdir?","World Wide Web|Web Win Work|World Web Wire|We Want Web",0,"Qlobal veb."],
+[2,"URL nəyi göstərir?","Veb ünvanı|Kompüterin sürəti|Fayl ölçüsü|Printer modeli",0,"URL — veb ünvanıdır."]])
+};
+const NM=Object.keys(DB),LV=[["Asan",1,"#16a34a"],["Orta",2,"#f59e0b"],["Çətin",3,"#e11d48"]];
+
+let me=null,role='t',mode='login',test=[],cur='',key=false,allR=[],myR=[],unsubs=[],busy=false,pend=null,authReady=false;
+
+/* ---------- köməkçilər ---------- */
+const app=h=>$('#app').innerHTML=h;
+function toast(m){const t=$('#toast');t.textContent='✔ '+m;t.style.display='block';setTimeout(()=>t.style.display='none',2600)}
+const rnd=n=>Array.from({length:n},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
+const mail=u=>u+'@tutorize.local';
+const stopL=()=>{unsubs.forEach(f=>f());unsubs=[]};
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}};
+function emsg(e){const c=e&&e.code||'';if(c.includes('email-already'))return'Bu istifadəçi adı artıq tutulub.';if(c.includes('invalid-credential')||c.includes('user-not-found')||c.includes('wrong-password'))return'İstifadəçi adı və ya şifrə səhvdir.';if(c.includes('network'))return'İnternet bağlantısı yoxdur.';if(c.includes('too-many'))return'Çox cəhd edildi. Bir az gözləyin.';if(c.includes('permission'))return'İcazə yoxdur (Firestore qaydalarını yoxlayın).';return'Xəta: '+(c||e)}
+
+/* ---------- test məntiqi ---------- */
+function mk(sn,ti,n){const s=DB[sn],pool=[...s.q.filter(q=>q[0]===ti),...s.q.filter(q=>q[0]!==ti)].slice(0,n);return pool.map((q,i)=>({t:s.t[q[0]],q:q[1],o:q[2],a:q[3],e:q[4],lv:i<Math.ceil(n*.4)?0:i<Math.ceil(n*.8)?1:2}))}
+function parse(c){const m=/^t-(\d+)-(\d+)-(\d+)-(\d+)-([A-Za-z0-9]{6})$/i.exec((c||'').trim());if(!m)return null;const g=+m[1],si=+m[2],ti=+m[3],n=+m[4],sn=NM[si];if(!sn||!DB[sn].t[ti]||![4,6].includes(n)||g<1||g>11)return null;const tid=m[5].toUpperCase();return{code:`t-${g}-${si}-${ti}-${n}-${tid}`,g:String(g),sn,ti,n,tid}}
+
+/* ---------- naviqasiya ---------- */
+function go(v,r,m){
+ if(v==='t'&&!(me&&me.r==='t')){v='auth';r='t'}
+ if(v==='s'&&!(me&&me.r==='s')){v='auth';r='s'}
+ $('#lo').classList.toggle('hidden',!me);
+ stopL();
+ if(v==='h')homeView();else if(v==='auth')authView(r||role,m||'login');else if(v==='t')tView();else sView();
+ scrollTo(0,0)}
+document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g){e.preventDefault();go(g.dataset.go)}});
+$('#lo').onclick=async()=>{await signOut(auth);me=null;test=[];cur='';pend=null;toast('Çıxış edildi');go('h')};
+function route(){
+ const m=/^#(t-\d+-\d+-\d+-\d+-[A-Za-z0-9]{6})$/i.exec(location.hash);
+ if(m){if(me&&me.r==='s'){go('s');startCode(m[1]);return}if(!me||me.r!=='s'){pend=m[1];go('auth','s','login');return}}
+ go(me?me.r:'h')}
+onAuthStateChanged(auth,async u=>{
+ if(busy)return;
+ if(!u){me=null;authReady=true;route();return}
+ try{const s=await getDoc(doc(db,'users',u.uid));if(s.exists())me={...s.data(),id:u.uid};else{await signOut(auth);me=null}}catch(e){me=null}
+ authReady=true;route()});
+addEventListener('hashchange',()=>authReady&&route());
+
+/* ---------- ana səhifə ---------- */
+function homeView(){app(`<section class="hero"><span class="chip" style="background:rgba(255,255,255,.2)">100% pulsuz</span><h1>Test və summativ iki dəqiqəyə hazırdır</h1><p>Müəllim test yaradır, şagird istənilən cihazdan həll edir, nəticələr avtomatik müəllimə çatır.</p></section>
+<div class="grid" style="margin-top:1rem"><div class="card"><h2>👩‍🏫 Müəllim</h2><p class="mut">Özəl kodla qeydiyyatdan keçin və sinif nəticələrini izləyin.</p><button class="btn" data-go="t">Müəllim girişi</button></div><div class="card"><h2>🎒 Şagird</h2><p class="mut">Hesab yaradın, test kodunu yazın və səhvlərinizə baxın.</p><button class="btn t" data-go="s">Şagird girişi</button></div></div>`)}
+
+/* ---------- giriş və qeydiyyat ---------- */
+function fld(id,l,t,ph,ac){return `<label>${l}<input id="${id}" type="${t}" placeholder="${ph||''}" autocomplete="${ac||'off'}"></label>`}
+function authView(r,m){
+ role=r;mode=m;const T=r==='t',L=m==='login';
+ const gr=Array.from({length:11},(_,i)=>`<option value="${i+1}"${i==6?' selected':''}>${i+1}-ci sinif</option>`).join('');
+ let f=fld('fu','İstifadəçi adı','text',L?'məs. ali_k':'3–20 simvol: a-z, 0-9, _ .','username');
+ if(!L){if(T)f=fld('fcode','Müəllim giriş kodu','text','MUE-XXXX-XXX')+f;f=fld('fn','Ad və soyad','text','Məs. Əli Həsənov','name')+f;
+  if(!T)f+=`<div class="grid"><label>Sinif<select id="fg">${gr}</select></label><label>Hərf (könüllü)<input id="fl" maxlength="1" placeholder="A"></label></div>`}
+ f+=fld('fp','Şifrə','password',L?'':'ən azı 6 simvol',L?'current-password':'new-password');
+ if(!L)f+=fld('fp2','Şifrəni təkrar yazın','password','','new-password');
+ f+=`<label style="font-weight:400"><input type="checkbox" id="fs"> Şifrəni göstər</label>`;
+ app(`<div class="card" style="max-width:26rem;margin:2rem auto"><h2>${T?'👩‍🏫 Müəllim':'🎒 Şagird'} ${L?'girişi':'qeydiyyatı'}</h2>${pend?'<p class="note">Test linki tapıldı. Daxil olun, test avtomatik açılacaq.</p>':''}<div class="tabs"><button data-m="login" class="${L?'on':''}">Daxil ol</button><button data-m="signup" class="${L?'':'on'}">Qeydiyyat</button></div><form id="af">${f}<p class="err" id="aerr"></p><button class="btn ${T?'':'t'}" style="width:100%;margin-top:1rem" id="asub">${L?'Daxil ol':'Hesab yarat'}</button></form></div>`);
+ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>authView(r,b.dataset.m));
+ $('#fs').onchange=e=>['#fp','#fp2'].forEach(s=>{const x=$(s);if(x)x.type=e.target.checked?'text':'password'});
+ $('#af').onsubmit=authSubmit}
+async function authSubmit(e){
+ e.preventDefault();const er=$('#aerr'),btn=$('#asub');er.textContent='';
+ const u=$('#fu').value.trim().toLowerCase(),p=$('#fp').value;
+ if(!u||!p){er.textContent='İstifadəçi adı və şifrəni yazın.';return}
+ busy=true;btn.disabled=true;let cred=null;
+ try{
+  if(mode==='login'){
+   cred=await signInWithEmailAndPassword(auth,mail(u),p);
+   const s=await getDoc(doc(db,'users',cred.user.uid));
+   if(!s.exists()||s.data().r!==role){await signOut(auth);throw{code:'x',message:'Bu hesab '+(role==='t'?'müəllim':'şagird')+' hesabı deyil.'}}
+   me={...s.data(),id:cred.user.uid};
+  }else{
+   const n=$('#fn').value.trim();
+   if(n.length<3)throw{message:'Ad və soyadı tam yazın.'};
+   if(!/^[a-z0-9_.]{3,20}$/.test(u))throw{message:'İstifadəçi adı 3–20 simvol: a-z, 0-9, _ və ya nöqtə.'};
+   if(p.length<6)throw{message:'Şifrə ən azı 6 simvol olmalıdır.'};
+   if(p!==$('#fp2').value)throw{message:'Şifrələr eyni deyil.'};
+   let code='';if(role==='t'){code=$('#fcode').value.trim().toUpperCase();if(!code)throw{message:'Müəllim giriş kodunu yazın.'}}
+   cred=await createUserWithEmailAndPassword(auth,mail(u),p);
+   const id=cred.user.uid,b=writeBatch(db);let prof;
+   if(role==='t'){const tid=rnd(6);prof={r:'t',u,n,tid,code,ts:Date.now()};b.set(doc(db,'used',code),{uid:id});b.set(doc(db,'tids',tid),{uid:id})}
+   else{const g=$('#fg').value,l=$('#fl').value.trim().toUpperCase().slice(0,1);prof={r:'s',u,n,g,cl:g+l,ts:Date.now()}}
+   b.set(doc(db,'users',id),prof);
+   try{await b.commit()}catch(x){try{await cred.user.delete()}catch(y){}throw{message:role==='t'?'Müəllim kodu yanlışdır və ya artıq istifadə olunub.':emsg(x)}}
+   me={...prof,id};
+  }
+  ls.set('tz_u',u);toast('Xoş gəldiniz, '+me.n);
+  busy=false;
+  if(me.r==='s'&&pend){const c=pend;pend=null;go('s');startCode(c)}else go(me.r)
+ }catch(x){busy=false;btn.disabled=false;er.textContent=x.code?emsg(x):x.message}
+}
+
+/* ---------- müəllim paneli ---------- */
+function tView(){
+ const gr=Array.from({length:11},(_,i)=>`<option value="${i+1}"${i==6?' selected':''}>${i+1}-ci sinif</option>`).join('');
+ app(`<div class="card row"><div><b>Salam, ${esc(me.n)}</b><div class="mut sm">Müəllim kodunuz: <b>${me.tid}</b></div></div><button class="btn ghost" id="tcp">Kodu kopyala</button></div>
+<div class="card"><h2>Fənni seçin</h2><div class="tiles">${NM.map(n=>`<button class="tile" data-n="${n}" style="background:linear-gradient(135deg,${DB[n].c[0]},${DB[n].c[1]})"><b>${DB[n].e}</b>${n}</button>`).join('')}</div>
+<div class="grid"><label>Sinif<select id="grade">${gr}</select></label><label>Fənn<select id="subj"><option value="">Seçin</option>${NM.map(n=>`<option>${n}</option>`).join('')}</select></label><label>Mövzu<select id="topic" disabled></select></label><label>Sual sayı<select id="cnt"><option>4</option><option selected>6</option></select></label></div>
+<button class="btn" id="gen" style="margin-top:1rem" disabled>Test yarat</button></div>
+<section id="out" class="hidden">
+<div class="card"><h2>Bal qrupları</h2><div id="groups" class="grid"></div></div>
+<div class="row" style="margin-top:1.2rem"><h2>Test kartları</h2><div class="row"><button class="btn t" id="key">Cavab açarı</button><button class="btn" id="pdf">PDF yüklə</button><button class="btn g" id="wa">WhatsApp</button><button class="btn a" id="stu">Şagird rejimi</button><button class="btn r" id="delt">Testi sil</button></div></div>
+<div id="cards" class="grid" style="margin-top:.8rem;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))"></div>
+<div class="card"><h2>Şagirdlərə göndəriləcək link</h2><div class="row" style="justify-content:flex-start"><input id="link" readonly style="max-width:34rem"><button class="btn ghost" id="copy">Kopyala</button></div>
+<h2 style="margin-top:1.4rem">Sinfin nəticələri <span class="chip" style="background:var(--ok)">canlı</span></h2><p class="mut sm" id="note"></p><div class="row" style="justify-content:flex-start" id="stats"></div>
+<h3 style="margin-top:1rem">Sinif üzrə</h3><div id="cls"></div><h3 style="margin-top:1rem">Mövzu üzrə (%)</h3><div id="chart"></div><h3 style="margin-top:1rem">Şagirdlər</h3><div id="tbl" style="overflow-x:auto"></div></div></section>`);
+ $('#tcp').onclick=()=>{try{navigator.clipboard.writeText(me.tid)}catch(e){}toast('Kopyalandı')};
+ const pick=n=>{$('#subj').value=n;const t=$('#topic');t.disabled=false;t.innerHTML=DB[n].t.map(x=>`<option>${x}</option>`).join('');document.querySelectorAll('.tile').forEach(b=>b.classList.toggle('on',b.dataset.n===n));$('#gen').disabled=false};
+ document.querySelectorAll('.tile').forEach(b=>b.onclick=()=>pick(b.dataset.n));
+ $('#subj').onchange=e=>e.target.value&&pick(e.target.value);
+ $('#gen').onclick=()=>{const sn=$('#subj').value,ti=DB[sn].t.indexOf($('#topic').value);cur=`t-${$('#grade').value}-${NM.indexOf(sn)}-${ti}-${$('#cnt').value}-${me.tid}`;ls.set('tz_last:'+me.u,cur);key=false;load();render();$('#out').scrollIntoView()};
+ $('#delt').onclick=()=>{if(!confirm('Testi silmək istəyirsiniz? Nəticələr qalacaq.'))return;ls.set('tz_last:'+me.u,null);test=[];cur='';$('#out').classList.add('hidden')};
+ $('#key').onclick=()=>{key=!key;render()};
+ $('#pdf').onclick=()=>{key=true;render();setTimeout(()=>{try{window.print()}catch(e){}},500)};
+ $('#wa').onclick=()=>{window.open('https://wa.me/?text='+encodeURIComponent('Salam! Testi həll edin (hesab yaradın):\n'+$('#link').value),'_blank')};
+ $('#copy').onclick=()=>{try{navigator.clipboard.writeText($('#link').value)}catch(e){$('#link').select()}toast('Link kopyalandı')};
+ $('#stu').onclick=()=>{const p=parse(cur);if(p)openStu(test,cur,true,p,null)};
+ unsubs.push(onSnapshot(query(collection(db,'results'),where('tu','==',me.id)),sn=>{allR=sn.docs.map(d=>d.data());if(test.length)stats()},e=>toast('Nəticələri oxumaq mümkün olmadı')));
+ const z=ls.get('tz_last:'+me.u),p=parse(z);if(p){cur=p.code;load();render()}else{test=[];cur=''}}
+function load(){const p=parse(cur);test=mk(p.sn,p.ti,p.n)}
+function render(){
+ $('#out').classList.remove('hidden');
+ const tot=test.reduce((a,q)=>a+LV[q.lv][1],0);
+ $('#groups').innerHTML=LV.map((l,i)=>{const c=test.filter(q=>q.lv===i).length;return `<div class="card" style="margin:0;border-left:6px solid ${l[2]}"><div class="mut sm">${l[0]}</div><b>${c} sual</b><div class="sm">${l[1]} bal × ${c} = ${c*l[1]}</div></div>`}).join('')+`<div class="card" style="margin:0;background:var(--ac);color:#fff"><div class="sm">Cəmi</div><b>${tot} bal</b></div>`;
+ $('#cards').innerHTML=test.map((q,i)=>`<article class="card" style="margin:0"><div class="row"><span class="chip" style="background:${LV[q.lv][2]}">${LV[q.lv][0]} · ${LV[q.lv][1]} bal</span><span class="mut sm">${q.t}</span></div><h3 style="margin-top:.5rem">${i+1}. ${esc(q.q)}</h3>${q.o.map((o,j)=>`<div class="opt${key&&j===q.a?' ok':''}"><b>${'ABCD'[j]}</b> ${esc(o)}</div>`).join('')}${key?`<p class="sm"><b>Cavab: ${'ABCD'[q.a]}.</b> <span class="mut">${esc(q.e)}</span></p>`:''}</article>`).join('');
+ $('#link').value=location.href.split('#')[0]+'#'+cur;stats()}
+const sc=r=>[...r.a].filter(x=>x==='1').length,PC=r=>Math.round(sc(r)/r.a.length*100);
+const clr=p=>p<50?'var(--bad)':p<75?'var(--am)':'var(--ok)';
+const B=(l,p)=>`<div style="margin-top:.5rem"><div class="row sm" style="font-weight:700"><span>${esc(l)}</span><span>${p}%</span></div><div class="bar"><i style="width:${p}%;background:${clr(p)}"></i></div></div>`;
+function stats(){
+ if(!$('#stats'))return;
+ const m={};allR.filter(r=>r.c===cur).sort((a,b)=>a.ts-b.ts).forEach(r=>m[r.su]=r);const R=Object.values(m),n=R.length;
+ const avg=n?Math.round(R.reduce((a,r)=>a+PC(r),0)/n):null;
+ const T=[...new Set(test.map(q=>q.t))];
+ const tp=T.map(t=>{let a=0,b=0;test.forEach((q,i)=>{if(q.t===t)R.forEach(r=>{b++;if(r.a[i]==='1')a++})});return[t,b?Math.round(a/b*100):null]}).filter(x=>x[1]!==null);
+ const G={};R.forEach(r=>(G[r.cl||'-']=G[r.cl||'-']||[]).push(r));
+ const cl=Object.entries(G).sort().map(([c,a])=>[`${c} sinfi · ${a.length} şagird · keçmə ${Math.round(a.filter(r=>PC(r)>=50).length/a.length*100)}%`,Math.round(a.reduce((x,r)=>x+PC(r),0)/a.length)]);
+ const weak=[...tp].sort((a,b)=>a[1]-b[1])[0];
+ $('#note').textContent=n?`${n} şagirdin nəticəsi (hər şagirdin son cəhdi).`:'Hələ nəticə yoxdur. Şagird testi bitirən kimi burada avtomatik görünəcək.';
+ $('#stats').innerHTML=[['Şagird',n],['Siniflər',cl.length],['Orta nəticə',avg===null?'-':avg+'%'],['Zəif mövzu',weak?weak[0]:'-']].map(x=>`<div class="card" style="margin:0;min-width:140px"><div class="mut sm">${x[0]}</div><b>${esc(x[1])}</b></div>`).join('');
+ $('#cls').innerHTML=cl.length?cl.map(x=>B(x[0],x[1])).join(''):'<p class="mut">-</p>';
+ $('#chart').innerHTML=tp.length?tp.map(x=>B(x[0],x[1])).join(''):'<p class="mut">-</p>';
+ $('#tbl').innerHTML=n?`<table><tr class="mut"><th>Şagird</th><th>Sinif</th><th>Düz</th><th>%</th></tr>${R.map(r=>`<tr><td>${esc(r.n)}</td><td>${esc(r.cl||'-')}</td><td>${sc(r)}/${r.a.length}</td><td><b>${PC(r)}%</b></td></tr>`).join('')}</table>`:'<p class="mut">-</p>'}
+
+/* ---------- şagird paneli ---------- */
+function sView(){
+ app(`<div class="card row"><div><h2>Salam, ${esc(me.n)}</h2><p class="mut" style="margin:0">${esc(me.u)} · ${esc(me.cl)} sinfi</p></div><div class="row" id="sstat"></div></div>
+<div class="card"><h3>Test kodu və ya linki</h3><p class="mut sm">Müəllimin göndərdiyi kodu yazın.</p><div class="row" style="justify-content:flex-start"><input id="code" style="max-width:24rem" placeholder="t-7-0-1-6-AB12CD"><button class="btn t" id="go">Testi başla</button></div><p class="err" id="cerr"></p></div>
+<div class="card"><h2>Mənim nəticələrim</h2><p class="mut sm">Bütün cihazlarda eyni görünür.</p><div id="hist"></div></div>`);
+ $('#go').onclick=()=>startCode($('#code').value);
+ $('#hist').onclick=e=>{const b=e.target.closest('[data-rev]');if(b){const r=myR.find(x=>String(x.ts)===b.dataset.rev);if(r)review(r)}};
+ unsubs.push(onSnapshot(query(collection(db,'results'),where('su','==',me.id)),sn=>{myR=sn.docs.map(d=>d.data()).sort((a,b)=>b.ts-a.ts);hist()},()=>toast('Tarixçəni oxumaq mümkün olmadı')))}
+function hist(){
+ if(!$('#hist'))return;
+ const pc=myR.map(r=>Math.round(sc(r)/r.a.length*100));
+ $('#sstat').innerHTML=[['Test sayı',myR.length],['Orta nəticə',pc.length?Math.round(pc.reduce((a,b)=>a+b,0)/pc.length)+'%':'-']].map(x=>`<div class="card" style="margin:0"><div class="mut sm">${x[0]}</div><b>${x[1]}</b></div>`).join('');
+ $('#hist').innerHTML=myR.length?myR.map(r=>{const p=parse(r.c);if(!p)return'';return `<div class="row card" style="margin:.5rem 0"><span><b>${DB[p.sn].t[p.ti]}</b> <span class="mut sm">${p.sn} · ${new Date(r.ts).toLocaleDateString('az-AZ')}</span></span><span class="row"><span class="chip" style="background:var(--tl)">${sc(r)}/${r.a.length} · ${Math.round(sc(r)/r.a.length*100)}%</span><button class="btn ghost" data-rev="${r.ts}">Bax</button></span></div>`}).join(''):'<p class="mut">Hələ test həll etməmisiniz.</p>'}
+async function startCode(c){
+ const p=parse(c),er=$('#cerr');
+ if(!p){if(er)er.textContent='Kod yanlışdır (məs. t-7-0-1-6-AB12CD).';return}
+ try{const s=await getDoc(doc(db,'tids',p.tid));if(!s.exists()){if(er)er.textContent='Bu müəllim kodu tapılmadı.';return}
+  if(er)er.textContent='';openStu(mk(p.sn,p.ti,p.n),p.code,false,p,s.data().uid)}catch(e){if(er)er.textContent=emsg(e)}}
+
+/* ---------- test həlli və təhlil ---------- */
+function openStu(t,cd,prev,p,tu){
+ const m=$('#mbox');
+ m.innerHTML=`<div class="row"><div><h2>${p.sn} testi</h2><p class="mut sm">${DB[p.sn].t[p.ti]} · ${p.g}-ci sinif</p></div><button class="btn ghost" id="cl">Bağla</button></div><p class="mut sm">${prev?'Önizləmə: nəticə yadda saxlanmır.':'Şagird: <b>'+esc(me.n)+'</b>'}</p><div class="bar" style="margin-top:.6rem"><i id="pb" style="width:0;background:var(--ac)"></i></div><p class="sm" id="prg">0 / ${t.length}</p>`+
+ t.map((q,i)=>`<div style="margin-top:1rem"><b>${i+1}. ${esc(q.q)}</b>${q.o.map((o,j)=>`<label class="opt" style="font-weight:400;margin-top:.4rem"><input type="radio" name="q${i}" value="${j}"> ${esc(o)}</label>`).join('')}</div>`).join('')+`<button class="btn g" style="margin-top:1.2rem" id="sub">Cavabları göndər</button><div id="sr"></div>`;
+ $('#cl').onclick=closeM;
+ m.querySelectorAll('input[type=radio]').forEach(r=>r.onchange=()=>{m.querySelectorAll(`input[name="${r.name}"]`).forEach(x=>x.parentElement.classList.toggle('sel',x.checked));const d=t.filter((q,i)=>m.querySelector(`input[name="q${i}"]:checked`)).length;$('#prg').textContent=`${d} / ${t.length}`;$('#pb').style.width=Math.round(d/t.length*100)+'%'});
+ $('#modal').classList.add('on');
+ $('#sub').onclick=async()=>{
+  const sel=t.map((q,i)=>{const c=m.querySelector(`input[name="q${i}"]:checked`);return c?+c.value:-1});
+  const a=t.map((q,i)=>sel[i]===q.a),k=a.filter(Boolean).length;
+  const rec={c:cd,tid:p.tid,tu:tu||'',su:me.id,n:me.n,cl:me.cl||'',a:a.map(x=>+x).join(''),s:sel,ts:Date.now()};
+  const b=$('#sub');b.disabled=true;
+  if(!prev){try{await addDoc(collection(db,'results'),rec)}catch(e){b.disabled=false;$('#sr').innerHTML=`<p class="err">Nəticə göndərilmədi: ${esc(emsg(e))}</p>`;return}}
+  b.remove();
+  $('#sr').innerHTML=`<div class="card" style="border-left:6px solid var(--tl)"><h2>${k} / ${t.length} düz · ${Math.round(k/t.length*100)}%</h2><p class="mut">${prev?'Önizləmə nəticəsi.':'Nəticəniz müəllimə avtomatik göndərildi.'} ${k*2>=t.length?'Əla nəticə!':'Səhvlərinizi təhlil edin.'}</p><button class="btn" id="rev">Cavabları gör</button></div>`;
+  $('#rev').onclick=()=>review(rec)}}
+function review(rec){
+ const p=parse(rec.c);if(!p)return;const qs=mk(p.sn,p.ti,p.n),s=rec.s||[];
+ $('#mbox').innerHTML=`<div class="row"><div><h2>Cavabların təhlili</h2><p class="mut sm">${p.sn} · ${DB[p.sn].t[p.ti]} · ${sc(rec)} / ${qs.length} düz</p></div><button class="btn ghost" id="cl">Bağla</button></div>`+qs.map((q,i)=>{const ok=rec.a[i]==='1',ch=s[i]??-1;return `<div class="card" style="border-color:${ok?'var(--ok)':'var(--bad)'}"><div class="row"><b>${i+1}. ${esc(q.q)}</b><span class="chip" style="background:${ok?'var(--ok)':'var(--bad)'}">${ok?'Düz':'Səhv'}</span></div>${q.o.map((o,j)=>`<div class="opt ${j===q.a?'ok':(j===ch&&!ok?'bad':'')}"><b>${'ABCD'[j]}</b> ${esc(o)}${j===ch?' <span class="mut sm">(sizin cavab)</span>':''}</div>`).join('')}${!ok&&ch<0?'<p class="mut sm">Cavab verilməyib.</p>':''}<p class="sm"><b>İzah:</b> <span class="mut">${esc(q.e)}</span></p></div>`}).join('');
+ $('#cl').onclick=closeM;$('#modal').classList.add('on')}
+function closeM(){$('#modal').classList.remove('on')}
+addEventListener('keydown',e=>{if(e.key==='Escape')closeM()});
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeM()});
+</script>
+</body>
+</html>
